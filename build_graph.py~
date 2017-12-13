@@ -1,0 +1,14 @@
+import numpy as np
+from scipy.spatial.distance import pdist
+import cv2
+
+
+def exponential_euclidian(X, sigma2):
+    """
+    this function compute the similarity graph using the exponential
+    euclidian similarity
+    input : matrix X of size n x m. n number of vector of dimension m
+    output a similarity graph of size n x n
+    """
+    similarities = pdist(X, 'euclidian')
+    return np.exp(-similarities/(2*sigma2))
