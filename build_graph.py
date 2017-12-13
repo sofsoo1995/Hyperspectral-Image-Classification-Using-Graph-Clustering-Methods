@@ -16,7 +16,7 @@ def exponential_euclidian(X, sigma2):
 def build_similarity_graph(X, sigma2, graph_type='knn', graph_thresh=10,
                            fonc_similarity=exponential_euclidian):
     """
-    this function use the a similarity distance to 
+    this function use the a similarity distance to
     build either a knn graph or a epsilon graph
     input : matrix X of size n x d. n number of vectors of dimension d
     output : W size n x n. the similarity graph.
