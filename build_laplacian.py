@@ -48,19 +48,6 @@ def compute_eig(W, m, lap_type='sym'):
     return S, V
     
 
-def spectral_clustering(W, K, lap_type='sym'):
-    """
-    this algorithm perform the spectral clustering
-    input : W a n x n matrix of the graph
-            K the number of cluster
-    output : label of each point
-    """
-    S, V = compute_eig(W, K, lap_type)
-    kmeans = KMeans(n_clusters=K)
-    label = kmeans.fit_predict(V)
-    return label
-
-
 def nystrom_extension(W, m, lap_type='sym'):
     '''
     this function compute the eigenvector and the eigenvalues of a
@@ -70,6 +57,8 @@ def nystrom_extension(W, m, lap_type='sym'):
     node we choose randomly.
     output : an approximation of the eigenvalues and the eigenfunction
     S and Phi
+    Assumption : It is the approximation for the symetrized laplacian.
+    for another laplacian, it might not work
     '''
     set_Z = np.random.permutation(W.shape[0])
     subset_X = set_Z[0:m]
@@ -114,3 +103,20 @@ def nystrom_extension(W, m, lap_type='sym'):
     Phi = np.vstack((Phi1, Phi2))
     S = 1 - Xi
     return S, Phi
+
+
+def spectral_clustering(W, m, K, lap_type='sym', nyst=False):
+    """
+    this algorithm perform the spectral clustering
+    input : W a n x n matrix of the graph
+            K the number of cluster
+            m the number of eigen vectors
+    output : label of each point
+    """
+    if(not nyst):
+        S, V = compute_eig(W, m, lap_type)
+    else:
+        S, V = nystrom_extension(W, m, lap_type)
+    kmeans = KMeans(n_clusters=K)
+    label = kmeans.fit_predict(V)
+    return label
