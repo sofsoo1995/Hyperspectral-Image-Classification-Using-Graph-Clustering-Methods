@@ -6,13 +6,16 @@ def purity(C, C_hat):
     """
     compute the purity of two sets(matrix of N x num_class)
     """
-    # TODO: Compute the purity of two sets
-    return None
+    # DONE: Compute the purity of two sets
+    lab = np.argmax(C, axis=1)
+    lab_hat = np.argmax(C_hat, axis=1)
+    
+    return np.sum(lab == lab_hat) / lab.shape[0]
 
 
 def semi_supervised(W, mask, label, num_class, m, dt, mu, delta,
-                    pure=0.9999, nyst=True,
-                    lap_type='sym'):
+                    pure=0.99, nyst=True,
+                    lap_type='sym', verb=True):
     """
     this algorithm performs a segmentation of an image using a SSL.
     
@@ -21,7 +24,8 @@ def semi_supervised(W, mask, label, num_class, m, dt, mu, delta,
     dt, time step for the heat equation, mu
     a confidence of the data term, delta is the threshold
     mask : which pixel is labeled. a N size vector
-    label : the different label. a matrix that have the same size as u
+    label : the different label. a vector that contains the known
+    label for each pixel. the position is known thanks to mask
     """
     # Eigen Value And Eigenvector
     if(nyst):
@@ -30,6 +34,8 @@ def semi_supervised(W, mask, label, num_class, m, dt, mu, delta,
         S, V = compute_eig(W, m, lap_type)
 
     n = 1
+    if(verb):
+        print('Computation of eigenvalues : Done')
 
     # Constants
     N = W.shape[0]
@@ -38,7 +44,9 @@ def semi_supervised(W, mask, label, num_class, m, dt, mu, delta,
     # 1 . Initialisation
     # u will be the label for each class
     # TODO : Change the initialisation
-    u = label
+    u_beg = np.random.randint(0, num_class, N)
+    u_beg[np.where(mask == 1)] = label
+    u = np.eye(num_class)[u_beg]
     # Computation of d
     d = V.T.dot(mu * mask * (u - label))
     # V.T.dot(V) is the identity
@@ -56,7 +64,8 @@ def semi_supervised(W, mask, label, num_class, m, dt, mu, delta,
     mask_r[row, r] = 1
     u1 = u1 * mask_r
     u1[row, r] = 1
-
+    if(verb):
+        print('computation of one iteration : Done')
     # Iterations.
     while(purity(u, u1) < pure):
         u = u1
@@ -72,8 +81,11 @@ def semi_supervised(W, mask, label, num_class, m, dt, mu, delta,
         mask_r[row, r] = 1
         u1 = u1 * mask_r
         u1[row, r] = 1
-        
         n = n+1
+        if(verb):
+            print('iteration '+str(n-1))
+
+    print('Done')
     return u1
         
     

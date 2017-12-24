@@ -45,7 +45,7 @@ def compute_eig(W, m, lap_type='sym'):
     V = V[:, ind]
     V = V[:, 0:m]
     S = S[0:m]
-    return S, V
+    return np.real(S), V
     
 
 def nystrom_extension(W, m, lap_type='sym'):
@@ -102,7 +102,7 @@ def nystrom_extension(W, m, lap_type='sym'):
     
     Phi = np.vstack((Phi1, Phi2))
     S = 1 - Xi
-    return S, Phi
+    return np.real(S), Phi
 
 
 def spectral_clustering(W, m, K, lap_type='sym', nyst=False):
