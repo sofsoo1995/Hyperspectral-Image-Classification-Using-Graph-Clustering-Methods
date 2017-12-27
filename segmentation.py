@@ -13,8 +13,8 @@ def purity(C, C_hat):
     return np.sum(lab == lab_hat) / lab.shape[0]
 
 
-def semi_supervised(W, mask, label, num_class, m, dt, mu, delta,
-                    pure=0.99, nyst=True,
+def semi_supervised(X, sigma2, mask, label, num_class, m, dt, mu, delta,
+                    pure=0.99,
                     lap_type='sym', verb=True):
     """
     this algorithm performs a segmentation of an image using a SSL.
@@ -28,17 +28,15 @@ def semi_supervised(W, mask, label, num_class, m, dt, mu, delta,
     label for each pixel. the position is known thanks to mask
     """
     # Eigen Value And Eigenvector
-    if(nyst):
-        S, V = nystrom_extension(W, m, lap_type)
-    else:
-        S, V = compute_eig(W, m, lap_type)
+    
+    S, V = nystrom_extension(X, m, sigma2, lap_type)
 
     n = 1
     if(verb):
         print('Computation of eigenvalues : Done')
 
     # Constants
-    N = W.shape[0]
+    N = X.shape[0]
     row = np.arange(N)
 
     # 1 . Initialisation

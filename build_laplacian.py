@@ -1,5 +1,7 @@
 import numpy as np
 from sklearn.cluster import KMeans
+from build_graph import exponential_euclidian
+import scipy.spatial.distance as sc
 
 
 def build_laplacian(W, lap_type='sym'):
@@ -48,26 +50,30 @@ def compute_eig(W, m, lap_type='sym'):
     return np.real(S), V
     
 
-def nystrom_extension(W, m, lap_type='sym'):
+def nystrom_extension(X, m, sigma2, lap_type='sym'):
     '''
     this function compute the eigenvector and the eigenvalues of a
     matrix using the nystrom extension.
+    Important : the graph is not built entirely.
     See Part 3.3 of the article
-    input : the matrix W size n x n. the graph m the number of
+    input : the matrix X size n x p. the graph m the number of
     node we choose randomly.
     output : an approximation of the eigenvalues and the eigenfunction
     S and Phi
     Assumption : It is the approximation for the symetrized laplacian.
     for another laplacian, it might not work
     '''
-    set_Z = np.random.permutation(W.shape[0])
+    set_Z = np.random.permutation(X.shape[0])
     subset_X = set_Z[0:m]
     subset_Y = set_Z[m:]
     
     # selection of the subgraph
-    Wxx = W[np.ix_(subset_X, subset_X)]
-    Wxy = W[np.ix_(subset_X, subset_Y)]
-    Wyx = W[np.ix_(subset_Y, subset_X)]
+    Xm = X[subset_X]
+    Xnm = X[subset_Y]
+    sim = sc.cdist(Xm, Xnm, 'sqeuclidean')
+    Wxx = exponential_euclidian(Xm, sigma2)
+    Wxy = np.exp(-sim/(2*sigma2))
+    Wyx = Wxy.T
     
     Wxx_inv = np.linalg.pinv(Wxx)
 
@@ -105,7 +111,7 @@ def nystrom_extension(W, m, lap_type='sym'):
     return np.real(S), Phi
 
 
-def spectral_clustering(W, m, K, lap_type='sym', nyst=False):
+def spectral_clustering(W, m, K, lap_type='sym'):
     """
     this algorithm perform the spectral clustering
     input : W a n x n matrix of the graph
@@ -113,10 +119,8 @@ def spectral_clustering(W, m, K, lap_type='sym', nyst=False):
             m the number of eigen vectors
     output : label of each point
     """
-    if(not nyst):
-        S, V = compute_eig(W, m, lap_type)
-    else:
-        S, V = nystrom_extension(W, m, lap_type)
+    
+    S, V = compute_eig(W, m, lap_type)
     kmeans = KMeans(n_clusters=K)
     label = kmeans.fit_predict(V)
     return label
