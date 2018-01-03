@@ -1,8 +1,10 @@
 import numpy as np
 from build_laplacian import nystrom_extension, compute_eig
-from build_graph import build_similarity_graph
+from build_graph import build_similarity_graph, exponential_euclidian
 from segmentation import semi_supervised
 from spectral import open_image
+from scipy.spatial.distance import pdist, cdist, squareform
+import scipy.io as sio
 import time
 
 
@@ -24,12 +26,19 @@ print('read an image')
 
 print('test semi supervised')
 
-A = open_image('../database/Urban_F210/Urban_F210.hdr').load()
-A = A.reshape(A.shape[0]*A.shape[1], A.shape[2])
+# A = open_image('../database/Urban_F210/Urban_F210.hdr').load()
+# A = A.reshape(A.shape[0]*A.shape[1], A.shape[2])
+mat_img = sio.loadmat('../database/Urban_R162.mat')
+A = mat_img['Y'].T
 start = time.time()
 print('Compute nystrom ext')
-S, V = nystrom_extension(X, 10, 1)
+S, V = nystrom_extension(A, 10, 1)
 print('Done')
 print(time.time()-start)
 print(S)
+
+# find label
+# label = sio.loadmat('../database/GroundTruth/end3.mat')
+# print(label)
+
 

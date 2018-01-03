@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 from build_graph import exponential_euclidian
 import scipy.spatial.distance as sc
-
+import scipy 
 
 def build_laplacian(W, lap_type='sym'):
     """
@@ -38,6 +38,7 @@ def compute_eig(W, m, lap_type='sym'):
     input : W a n x n matrix the matrix of the graph
             m the number of eigenvector we keep
     output : the label of each point and the matrix that contains the
+
              K first eig
     """
     L = build_laplacian(W, lap_type)
@@ -50,7 +51,7 @@ def compute_eig(W, m, lap_type='sym'):
     return np.real(S), V
     
 
-def nystrom_extension(X, m, sigma2, lap_type='sym'):
+def nystrom_extension(X, m, sigma2, cosine=False, lap_type='sym'):
     '''
     this function compute the eigenvector and the eigenvalues of a
     matrix using the nystrom extension.
@@ -66,49 +67,49 @@ def nystrom_extension(X, m, sigma2, lap_type='sym'):
     set_Z = np.random.permutation(X.shape[0])
     subset_X = set_Z[0:m]
     subset_Y = set_Z[m:]
-    
+
     # selection of the subgraph
     Xm = X[subset_X]
     Xnm = X[subset_Y]
-    sim = sc.cdist(Xm, Xnm, 'sqeuclidean')
-    Wxx = exponential_euclidian(Xm, sigma2)
-    Wxy = np.exp(-sim/(2*sigma2))
-    Wyx = Wxy.T
-    
-    Wxx_inv = np.linalg.pinv(Wxx)
-
-    # normalized versions of Wxx and Wxy
-    dx = Wxx.dot(np.ones((Wxx.shape[0], 1))) + Wxy.dot(
-        np.ones((Wxy.shape[1], 1)))
-
-    dy = Wyx.dot(np.ones((Wyx.shape[1], 1))) + Wyx.dot(
-        Wxx_inv).dot(Wxy).dot(np.ones((Wyx.shape[0], 1)))
-
-    sx = np.sqrt(dx)
-    sy = np.sqrt(dy)
-    
-    Wxx = Wxx / sx.dot(sx.T)
-    Wxy = Wxy / sx.dot(sy.T)
+    if(cosine):
+        simXY = sc.cdist(Xm, Xnm, 'cosine', np.float64)
+        simXX = sc.cdist(Xm, Xm, 'cosine', np.float64)
+    else:
+        simXX = sc.cdist(Xm, Xm, 'sceuclidean', np.float64)
+        simXY = sc.cdist(Xm, Xnm, 'sceuclidean', np.float64)
+    Wxx = np.exp(-simXX/(2*sigma2))
+    Wxy = np.exp(-simXY/(2*sigma2))
     Wyx = Wxy.T
 
-    # computation of eigenvalues approx
-
-    Gamma, B = np.linalg.eig(Wxx)
-    Wxx_mdemi = B.dot(np.diag(1/np.sqrt(Gamma))).dot(B.T)
-    # Mat is the second matrix to diagonalize
-    Mat = Wxx + Wxx_mdemi.dot(Wxy.dot(Wyx)).dot(Wxx_mdemi)
-    Xi, At = np.linalg.eig(Mat)
-
-    Gamma_demi = np.diag(np.sqrt(Gamma))
-    Gamma_mdemi = np.diag(1/np.sqrt(Gamma))
-    Xi_mdemi = np.diag(1/np.sqrt(Xi))
+    # Normalisation of Wxx and Wxy
+    d1 = np.sum(np.vstack((Wxx, Wyx)), axis=0)
+    d2 = np.sum(Wxy, axis=0) + np.sum(Wyx, axis=0).dot(
+        np.linalg.pinv(Wxx).dot(Wxy))
+    dhat = np.sqrt(1 / np.hstack((d1, d2)))
+    sx = np.array([dhat[0:m]])
+    sy = np.array([dhat[m:]])
     
-    Phi1 = B.dot(Gamma_demi.dot(B.T)).dot(At.T.dot(Xi_mdemi))
-    Phi2 = Wyx.dot(B.dot(Gamma_mdemi).dot(B.T)).dot(At.T.dot(Xi_mdemi))
+    Wxx = Wxx * (sx.T.dot(sx))
+    Wxy = Wxy * (sx.T.dot(sy))
+    Wyx = Wxy.T
+
+    # Estimation of eigen vectors in V
+    Wxx_si = scipy.linalg.sqrtm(np.linalg.pinv(Wxx))
+    Q = Wxx + Wxx_si.dot(Wxy.dot(Wyx)).dot(Wxx_si)
+    U, L, Vt = np.linalg.svd(Q)
+    V = np.vstack((Wxx, Wyx)).dot(Wxx_si).dot(
+        U.dot(np.linalg.pinv(np.sqrt(np.diag(L)))))
     
-    Phi = np.vstack((Phi1, Phi2))
-    S = 1 - Xi
-    return np.real(S), Phi
+    # sq_sum = np.sqrt(np.sum(np.multiply(V, V), axis=1))+1e-20
+    # sq_sum_mask = np.zeros((len(sq_sum), m), dtype=np.float64)
+    # for k in range(m):
+    #    sq_sum_mask[:, k] = sq_sum
+
+    # Umat = np.divide(V, sq_sum_mask)
+    Umat = V
+    Xres = np.zeros((Umat.shape[0], Umat.shape[1]))
+    Xres[set_Z, :] = Umat
+    return (1-L), Xres
 
 
 def spectral_clustering(W, m, K, lap_type='sym'):

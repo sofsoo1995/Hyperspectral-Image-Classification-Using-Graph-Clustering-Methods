@@ -2,19 +2,23 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
 
-def exponential_euclidian(X, sigma2):
+def exponential_euclidian(X, sigma2, cosine=False):
     """
     this function compute the similarity graph using the exponential
     euclidian similarity
     input : matrix X of size n x d. n number of vector of dimension d
     output a complete similarity graph of size n x n
     """
-    similarities = squareform(pdist(X, 'sqeuclidean'))
+    if(cosine):
+        similarities = squareform(pdist(X, 'cosine'))
+    else:
+        similarities = squareform(pdist(X, 'sqeuclidean'))
+    
     return np.exp(-similarities/(2*sigma2))
 
 
 def build_similarity_graph(X, sigma2, graph_type='knn', graph_thresh=10,
-                           fonc_similarity=exponential_euclidian):
+                           cosine=False):
     """
     this function use the a similarity distance to
     build either a knn graph or a epsilon graph
@@ -22,7 +26,7 @@ def build_similarity_graph(X, sigma2, graph_type='knn', graph_thresh=10,
     output : W size n x n. the similarity graph.
     """
     
-    similarities = fonc_similarity(X, sigma2)
+    similarities = exponential_euclidian(X, sigma2, cosine)
     W = np.zeros(similarities.shape)
     if(graph_type == 'knn'):
         # j_index : line of the maximums
